@@ -4,7 +4,7 @@ logger -t fbwifi-device "launched bootscript2"
 # Set LAN (wireless) IP subnet to something that does not conflict with WAN IP subnet
 ROUTER_IP=$(ip route | grep default | awk '{print $3}')
 if [[ $ROUTER_IP == "192*" ]]; then
-	MY_LAN_IP="172.16.0.1"
+	MY_LAN_IP="172.17.0.1"
 else
 	MY_LAN_IP="192.168.0.1"
 fi
