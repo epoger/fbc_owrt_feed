@@ -1,6 +1,22 @@
 #!/bin/sh
 logger -t fbwifi-device "launched bootscript2"
 
+# Device-specific logic to deal with image backups in flash.
+HWVERSION=$(cat /etc/fbwifi-device/hwversion)
+logger -t fbwifi-device "HWVERSION is $HWVERSION"
+case "$HWVERSION" in
+	cig_wf808)
+		IMAGE1_HEADER=$(hexdump /dev/mtdblock3 | head -n 1)
+		IMAGE2_HEADER=$(hexdump /dev/mtdblock5 | head -n 1)
+		if [ "$IMAGE1_HEADER" = "$IMAGE2_HEADER" ]; then
+			logger -t fbwifi-device "image1 and image2 headers are equal; no copy needed"
+		else
+			logger -t fbwifi-device "image1 and image2 headers differ; copying image1 to image2"
+			dd if=/dev/mtdblock3 of=/dev/mtdblock5 bs=1024 count=31488
+		fi
+		;;
+esac
+
 # Set LAN (wireless) IP subnet to something that does not conflict with WAN IP subnet
 ROUTER_IP=$(ip route | grep default | awk '{print $3}')
 if [[ $ROUTER_IP == "192*" ]]; then
