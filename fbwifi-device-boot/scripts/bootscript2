@@ -1,5 +1,14 @@
 #!/bin/sh
-logger -t fbwifi-device "launched bootscript2"
+
+# Log to both klogd (so it will show up on serial port and "dmesg")
+# and syslogd (so it will show up on "logread -e fbwifi")
+log()
+{
+	echo "$*" >/dev/kmsg
+	logger -t fbwifi-device "$*"
+}
+
+log "launched bootscript2"
 
 # Set LAN (wireless) IP subnet to something that does not conflict with WAN IP subnet
 ROUTER_IP=$(ip route | grep default | awk '{print $3}')
@@ -8,7 +17,7 @@ if [[ $ROUTER_IP == "192*" ]]; then
 else
 	MY_LAN_IP="192.168.0.1"
 fi
-logger -t fbwifi-device "ROUTER_IP is $ROUTER_IP, so MY_LAN_IP will be $MY_LAN_IP"
+log "ROUTER_IP is $ROUTER_IP, so MY_LAN_IP will be $MY_LAN_IP"
 uci set network.lan.ipaddr="$MY_LAN_IP"
 
 # Finally, open up WiFi (no encryption) so users can connect.
