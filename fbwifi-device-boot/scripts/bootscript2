@@ -1,4 +1,4 @@
-#!/bin/sh
+# FBWIFI
 
 # Log to both klogd (so it will show up on serial port and "dmesg")
 # and syslogd (so it will show up on "logread -e fbwifi")
