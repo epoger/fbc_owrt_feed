@@ -29,12 +29,15 @@ uci set firewall.@forwarding[-1].src='lan'
 uci set firewall.@forwarding[-1].dest='wan'
 
 # Disable SSH access, now that we're running OK.
-#uci set firewall.AllowSshAdminRule.enabled='true'
+uci set firewall.AllowSshAdminRule.enabled='false'
+
 # TEMPORARY: Instead, leave SSH access (via Ethernet only) in place,
-# with no password.
+# with no password... and open up HTTP admin also (again, only via Ethernet).
 echo "root::0:0:99999:7:::" >/tmp/shadow
 grep -v ^root /etc/shadow >>/tmp/shadow
 cp /tmp/shadow /etc/shadow
+uci set firewall.AllowSshAdminRule.enabled='true'
+uci set firewall.AllowHttpAdminRule.enabled='true'
 
 # Finally, open up WiFi (no encryption) so users can connect.
 # TODO: Wait for the FBWiFi Captive Portal to be in place before doing this.
