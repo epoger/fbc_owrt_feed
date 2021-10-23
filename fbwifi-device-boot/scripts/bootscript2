@@ -8,7 +8,39 @@ log()
 	logger -t fbwifi-device "$*"
 }
 
+# Update color(s) displayed by the LED, if those have changed since the last call.
+update_led_state()
+{
+	if [ "$PREV_LED_STATE" == $1 ]
+	then
+		return
+	fi
+	PREV_LED_STATE=$1
+
+	case $1 in
+	BlueGreen)
+		# indicates: FBWiFi is running, but not yet registered with a business
+		led_off red
+		led_on green
+		led_timer blue 500 500
+		;;
+	BlueViolet)
+		# indicates: this script has launched
+		led_timer red 500 500
+		led_off green
+		led_on blue
+		;;
+	SolidBlue)
+		# indicates: FBWiFi is running and registered with a business (ready for customers!)
+		led_off red
+		led_off green
+		led_on blue
+		;;
+	esac
+}
+
 log "launched bootscript2"
+update_led_state BlueViolet
 
 # Set LAN (wireless) IP subnet to something that does not conflict with WAN IP subnet
 ROUTER_IP=$(ip route | grep default | awk '{print $3}')
