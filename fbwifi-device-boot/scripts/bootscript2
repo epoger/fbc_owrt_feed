@@ -42,6 +42,9 @@ update_led_state()
 log "launched bootscript2"
 update_led_state BlueViolet
 
+# TODO: Delaying a bit, seems there may be race conditions around NAT forwarding.
+sleep 4
+
 # Set LAN (wireless) IP subnet to something that does not conflict with WAN IP subnet
 ROUTER_IP=$(ip route | grep default | awk '{print $3}')
 if [[ $ROUTER_IP == "192*" ]]; then
@@ -78,4 +81,6 @@ uci set wireless.default_radio0.encryption="none"
 
 uci commit
 reload_config
+# TODO: Delaying a bit, seems there may be race conditions around NAT forwarding.
+sleep 4
 /etc/init.d/network restart
