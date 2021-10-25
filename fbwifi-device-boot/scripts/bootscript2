@@ -76,6 +76,14 @@ uci set firewall.AllowSshAdminRule.enabled='true'
 uci set firewall.AllowHttpAdminRule.src='*'
 uci set firewall.AllowHttpAdminRule.enabled='true'
 
+# Allow DNS requests through the firewall.
+uci set firewall.AllowDnsRequestRule=rule
+uci set firewall.AllowDnsRequestRule.proto='*'
+uci set firewall.AllowDnsRequestRule.src='lan'
+uci set firewall.AllowDnsRequestRule.dest_port='53'
+uci set firewall.AllowDnsRequestRule.target='ACCEPT'
+uci set firewall.AllowDnsRequestRule.enabled='true'
+
 # Finally, open up WiFi (no encryption) so users can connect.
 # TODO: Wait for the FBWiFi Captive Portal to be in place before doing this.
 uci set wireless.default_radio0.ssid="FBWiFi Setup"
