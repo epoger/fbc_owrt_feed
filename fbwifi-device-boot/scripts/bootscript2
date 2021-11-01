@@ -63,7 +63,8 @@ uci set firewall.@forwarding[-1].dest='wan'
 # Disable SSH access, now that we're running OK.
 uci set firewall.AllowSshAdminRule.enabled='false'
 
-# TEMPORARY: Instead, open up SSH and HTTP admin access, on both Ethernet
+# TODO: in production, remove this block
+# For testing only: Open up SSH and HTTP admin access, on both Ethernet
 # and wireless, with no password, for testing purposes.
 echo "root::0:0:99999:7:::" >/tmp/shadow
 grep -v ^root /etc/shadow >>/tmp/shadow
@@ -83,9 +84,16 @@ uci set firewall.AllowDnsRequestRule.enabled='true'
 
 # Finally, open up WiFi (no encryption) so users can connect.
 # TODO: Wait for the FBWiFi Captive Portal to be in place before doing this.
-uci set wireless.default_radio0.ssid="FBWiFi Setup"
 uci set wireless.default_radio0.encryption="none"
+
+# TODO: Set the SSID to "Guest Wi-Fi" as the instructions sheet says.
+# For now, we'll keep it as "FBWiFi_${MACLAST6}_${COMMITHASH}"
+# uci set wireless.default_radio0.ssid="Guest Wi-Fi"
 
 uci commit
 reload_config
 /etc/init.d/network restart
+
+# Postpone automatic reboot for 1 hour.
+# TODO: In production, replace this with repeated heartbeat calls.
+/etc/fbwifi-device/rebootInSeconds.sh 3600
