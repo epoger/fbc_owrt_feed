@@ -109,6 +109,6 @@ uci commit
 reload_config
 /etc/init.d/network restart
 
-# Postpone automatic reboot for 1 hour.
+# Postpone automatic reboot for 24 hours.
 # TODO: In production, replace this with repeated heartbeat calls.
-/etc/fbwifi-device/rebootInSeconds.sh 3600
+/etc/fbwifi-device/rebootInSeconds.sh 86400
