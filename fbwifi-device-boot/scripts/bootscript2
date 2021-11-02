@@ -84,11 +84,24 @@ uci set firewall.AllowDnsRequestRule.enabled='true'
 
 # Finally, open up WiFi (no encryption) so users can connect.
 # TODO: Wait for the FBWiFi Captive Portal to be in place before doing this.
-uci set wireless.default_radio0.encryption="none"
-
 # TODO: Set the SSID to "Guest Wi-Fi" as the instructions sheet says.
-# For now, we'll keep it as "FBWiFi_${MACLAST6}_${COMMITHASH}"
-# uci set wireless.default_radio0.ssid="Guest Wi-Fi"
+RAWMAC1=$(cat /sys/class/net/eth0/address)
+RAWMAC2=${RAWMAC1//:/}
+MACLAST6=${RAWMAC2:6:6}
+FWVERSION=$(cat /etc/fbwifi-device/fwversion)
+COMMITHASH=${FWVERSION/*_/}
+uci set wireless.radio0.channel="auto"
+uci set wireless.radio0.hwmode="11g"
+uci set wireless.radio0.htmode="HT20"
+uci set wireless.radio0.disabled="0"
+uci set wireless.default_radio0.ssid="FBWiFi2.4_${MACLAST6}_${COMMITHASH}"
+uci set wireless.default_radio0.encryption="none"
+uci set wireless.radio1.channel="auto"
+uci set wireless.radio1.hwmode="11a"
+uci set wireless.radio1.htmode="VHT40"
+uci set wireless.radio1.disabled="0"
+uci set wireless.default_radio1.ssid="FBWiFi5.0_${MACLAST6}_${COMMITHASH}"
+uci set wireless.default_radio1.encryption="none"
 
 uci commit
 reload_config
