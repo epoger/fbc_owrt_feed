@@ -73,15 +73,19 @@ update_led_state BlueViolet
 # Set LAN (wireless) IP subnet to something that does not conflict with WAN IP subnet
 ROUTER_IP=$(ip route | grep default | awk '{print $3}')
 if [[ $ROUTER_IP == "192*" ]]; then
-	MY_LAN_IP="172.17.0.1"
+	MY_LAN_IP="172.16.0.1"
 else
 	MY_LAN_IP="192.168.0.1"
 fi
 log "ROUTER_IP is $ROUTER_IP, so MY_LAN_IP will be $MY_LAN_IP"
 uci set network.lan.ipaddr="$MY_LAN_IP"
-
+uci set network.lan.netmask='255.255.0.0'
 # Allow br-lan to come up (requires "/etc/init.d/network restart" to take effect)
 uci set network.lan.disabled=0
+
+uci set dhcp.lan.start='10'
+uci set dhcp.lan.limit='9000'
+uci set dhcp.lan.leasetime='1h'
 
 # Enable NAT forwarding from lan to wan
 uci add firewall forwarding 
