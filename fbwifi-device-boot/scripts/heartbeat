@@ -1,0 +1,14 @@
+# FBWIFI
+
+# Log to both klogd (so it will show up on serial port and "dmesg")
+# and syslogd (so it will show up on "logread -e fbwifi")
+log()
+{
+	echo "$*" >/dev/kmsg
+	logger -t fbwifi-device "$*"
+}
+
+log "postponing automatic reboot for 1 hour"
+/etc/fbwifi-device/rebootInSeconds.sh 3600
+
+# TODO: any other periodic housekeeping that might be needed
