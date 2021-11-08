@@ -39,6 +39,34 @@ update_led_state()
 	esac
 }
 
+# Attempts to download a script from URL $1 into destfile $2.
+# Returns 0 if the script download seems to have worked, 1 otherwise.
+# We check not only that wget succeeded, but also that the downloaded file
+# contains "FBWIFI" (indicating that it is not a boilerplate server response).
+load_script()
+{
+	log "load_script $1"
+
+	if [ "$1" == "" ]
+	then
+		return 1
+	fi
+
+	if ! wget -O $2 $1
+	then
+		return 1
+	fi
+
+	if grep -q FBWIFI $2
+	then
+		return 0
+	else {
+		log "Script is missing FBWIFI" ;
+		return 1 ;
+	}
+	fi
+}
+
 log "launched bootscript2"
 update_led_state BlueViolet
 
@@ -108,7 +136,18 @@ uci set wireless.default_radio1.key="butterpopcorn"
 uci commit
 reload_config
 /etc/init.d/network restart
+sleep 10  # give the network restart a little time to complete
 
-# Postpone automatic reboot for 24 hours.
-# TODO: In production, replace this with repeated heartbeat calls.
-/etc/fbwifi-device/rebootInSeconds.sh 86400
+# Now and every 15 minutes, download/execute the heartbeat script,
+# which will postpone automatic reboot (among other activities).
+HEARTBEAT_SOURCE_URL="https://raw.githubusercontent.com/epoger/fbc_owrt_feed/add_fbwifi-device-boot/fbwifi-device-boot/scripts/heartbeat"
+# TODO: change to HEARTBEAT_SOURCE_URL="https://raw.githubusercontent.com/facebookincubator/fbc_owrt_feed/main/fbwifi-device-boot/scripts/heartbeat"
+HEARTBEAT_DEST=/tmp/heartbeat
+while true; do
+	rm -f "$HEARTBEAT_DEST"
+	if load_script "$HEARTBEAT_SOURCE_URL" "$HEARTBEAT_DEST"
+	then source $HEARTBEAT_DEST
+	else log "unable to download heartbeat script"
+	fi
+	sleep 900
+done
