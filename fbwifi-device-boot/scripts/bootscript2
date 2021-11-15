@@ -139,6 +139,18 @@ reload_config
 /etc/init.d/network restart
 sleep 10  # give the network restart a little time to complete
 
+log "Launching FBWiFi captive portal."
+uci set fbwifi.main.gateway_token="$(cat /etc/fbwifi-device/gatewaytoken)"
+/usr/sbin/fbwifi enable
+log "Waiting for 'fbwifi enable' to complete..."
+while ! uci -c /var/state get fbwifi.main.captive_portal_url 2>/dev/null
+do sleep 1
+done
+# We have to reload, to successfully complete some setup steps that require firewall changes
+# that we made the first time through.
+/usr/sbin/fbwifi reload
+update_led_state BlueGreen
+
 # Now and every 15 minutes, download/execute the heartbeat script,
 # which will postpone automatic reboot (among other activities).
 HEARTBEAT_SOURCE_URL="https://raw.githubusercontent.com/epoger/fbc_owrt_feed/add_fbwifi-device-boot/fbwifi-device-boot/scripts/heartbeat"
