@@ -140,6 +140,7 @@ reload_config
 sleep 10  # give the network restart a little time to complete
 
 log "Launching FBWiFi captive portal."
+sed -i 's/iptables -t/iptables -w -t/' /usr/sbin/fbwifi_get_config
 uci set fbwifi.main.gateway_token="$(cat /etc/fbwifi-device/gatewaytoken)"
 /usr/sbin/fbwifi enable
 log "Waiting for 'fbwifi enable' to complete..."
