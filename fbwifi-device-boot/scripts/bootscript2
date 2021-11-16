@@ -146,6 +146,7 @@ log "Waiting for 'fbwifi enable' to complete..."
 while ! uci -c /var/state get fbwifi.main.captive_portal_url 2>/dev/null
 do sleep 1
 done
+sleep 10  # hack to really wait for it to complete
 # We have to reload, to successfully complete some setup steps that require firewall changes
 # that we made the first time through.
 /usr/sbin/fbwifi reload
