@@ -125,13 +125,13 @@ uci set wireless.radio0.channel="auto"
 uci set wireless.radio0.hwmode="11g"
 uci set wireless.radio0.htmode="HT20"
 uci set wireless.radio0.disabled="0"
-uci set wireless.default_radio0.ssid="FBWiFi2.4_${COMMITHASH}_${SERIAL_LAST6}"
+uci set wireless.default_radio0.ssid="GuestWiFi_${COMMITHASH}_${SERIAL_LAST6}"
 uci set wireless.default_radio0.encryption="none"
 uci set wireless.radio1.channel="auto"
 uci set wireless.radio1.hwmode="11a"
 uci set wireless.radio1.htmode="VHT40"
 uci set wireless.radio1.disabled="0"
-uci set wireless.default_radio1.ssid="FBWiFi5.0_${COMMITHASH}_${SERIAL_LAST6}"
+uci set wireless.default_radio1.ssid="GuestWiFi_${COMMITHASH}_${SERIAL_LAST6}"
 uci set wireless.default_radio1.encryption="none"
 
 uci commit
@@ -149,6 +149,7 @@ done
 sleep 10  # hack to really wait for it to complete
 # We have to reload, to successfully complete some setup steps that require firewall changes
 # that we made the first time through.
+log "Calling 'fbwifi reload' after initial setup."
 /usr/sbin/fbwifi reload
 update_led_state BlueGreen
 
