@@ -86,6 +86,18 @@ uci set firewall.AllowHttpAdminRule.enabled='true'
 uci commit
 service firewall restart
 
+log "Launching FBWiFi captive portal."
+log "gatewaytoken is [$(cat /etc/fbwifi-device/gatewaytoken)]"
+sed -i 's/iptables -t/iptables -w -t/' /usr/sbin/fbwifi_get_config
+uci set fbwifi.main.gateway_token="$(cat /etc/fbwifi-device/gatewaytoken)"
+/usr/sbin/fbwifi enable
+log "Waiting for 'fbwifi enable' to complete..."
+while ! uci -c /var/state get fbwifi.main.captive_portal_url 2>/dev/null
+do sleep 1
+done
+log "'fbwifi enable' is complete."
+sleep 10  # hack to really wait for it to complete
+
 # Set LAN (wireless) IP subnet to something that does not conflict with WAN IP subnet
 ROUTER_IP=$(ip route | grep default | awk '{print $3}')
 if [[ $ROUTER_IP == "192*" ]]; then
@@ -117,7 +129,6 @@ uci set firewall.AllowDnsRequestRule.target='ACCEPT'
 uci set firewall.AllowDnsRequestRule.enabled='true'
 
 # Finally, open up WiFi (no encryption) so users can connect.
-# TODO: Wait for the FBWiFi Captive Portal to be in place before doing this.
 # TODO: Set the SSID to "Guest Wi-Fi" as the instructions sheet says.
 SERIAL=$(fw_printenv -n eqsn)
 SERIAL_LAST6=${SERIAL:(-6)}
@@ -136,24 +147,16 @@ uci set wireless.radio1.disabled="0"
 uci set wireless.default_radio1.ssid="GuestWiFi_${COMMITHASH}_${SERIAL_LAST6}"
 uci set wireless.default_radio1.encryption="none"
 
+# Make the above network changes take effect.
+log "Committing final network settings."
 uci commit
 reload_config
 /etc/init.d/network restart
-sleep 10  # give the network restart a little time to complete
+sleep 10  # hack to really wait for network changes to complete
 
-log "Launching FBWiFi captive portal."
-log "gatewaytoken is [$(cat /etc/fbwifi-device/gatewaytoken)]"
-sed -i 's/iptables -t/iptables -w -t/' /usr/sbin/fbwifi_get_config
-uci set fbwifi.main.gateway_token="$(cat /etc/fbwifi-device/gatewaytoken)"
-/usr/sbin/fbwifi enable
-log "Waiting for 'fbwifi enable' to complete..."
-while ! uci -c /var/state get fbwifi.main.captive_portal_url 2>/dev/null
-do sleep 1
-done
-sleep 10  # hack to really wait for it to complete
 # We have to reload, to successfully complete some setup steps that require firewall changes
 # that we made the first time through.
-log "Calling 'fbwifi reload' after initial setup."
+log "Calling 'fbwifi reload' after final network settings."
 /usr/sbin/fbwifi reload
 update_led_state BlueGreen
 
