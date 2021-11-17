@@ -70,6 +70,22 @@ load_script()
 log "launched bootscript2"
 update_led_state BlueViolet
 
+# Disable SSH access, now that we're running OK.
+uci set firewall.AllowSshAdminRule.enabled='false'
+
+# TODO: in production, remove this block
+# For testing only: Open up SSH and HTTP admin access, on both Ethernet
+# and wireless, with no password, for testing purposes.
+echo "root::0:0:99999:7:::" >/tmp/shadow
+grep -v ^root /etc/shadow >>/tmp/shadow
+cp /tmp/shadow /etc/shadow
+uci set firewall.AllowSshAdminRule.src='*'
+uci set firewall.AllowSshAdminRule.enabled='true'
+uci set firewall.AllowHttpAdminRule.src='*'
+uci set firewall.AllowHttpAdminRule.enabled='true'
+uci commit
+service firewall restart
+
 # Set LAN (wireless) IP subnet to something that does not conflict with WAN IP subnet
 ROUTER_IP=$(ip route | grep default | awk '{print $3}')
 if [[ $ROUTER_IP == "192*" ]]; then
@@ -91,20 +107,6 @@ uci set dhcp.lan.leasetime='1h'
 uci add firewall forwarding 
 uci set firewall.@forwarding[-1].src='lan'
 uci set firewall.@forwarding[-1].dest='wan'
-
-# Disable SSH access, now that we're running OK.
-uci set firewall.AllowSshAdminRule.enabled='false'
-
-# TODO: in production, remove this block
-# For testing only: Open up SSH and HTTP admin access, on both Ethernet
-# and wireless, with no password, for testing purposes.
-echo "root::0:0:99999:7:::" >/tmp/shadow
-grep -v ^root /etc/shadow >>/tmp/shadow
-cp /tmp/shadow /etc/shadow
-uci set firewall.AllowSshAdminRule.src='*'
-uci set firewall.AllowSshAdminRule.enabled='true'
-uci set firewall.AllowHttpAdminRule.src='*'
-uci set firewall.AllowHttpAdminRule.enabled='true'
 
 # Allow DNS requests through the firewall.
 uci set firewall.AllowDnsRequestRule=rule
