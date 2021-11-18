@@ -67,6 +67,24 @@ load_script()
 	fi
 }
 
+# Now and every 15 minutes, download/execute the heartbeat script,
+# which will postpone automatic reboot (among other activities).
+heartbeat_loop()
+{
+	HEARTBEAT_SOURCE_URL="https://raw.githubusercontent.com/epoger/fbc_owrt_feed/add_fbwifi-device-boot/fbwifi-device-boot/scripts/heartbeat"
+	# TODO: change to HEARTBEAT_SOURCE_URL="https://raw.githubusercontent.com/facebookincubator/fbc_owrt_feed/main/fbwifi-device-boot/scripts/heartbeat"
+	HEARTBEAT_DEST=/tmp/heartbeat
+	while true; do
+		rm -f "$HEARTBEAT_DEST"
+		if load_script "$HEARTBEAT_SOURCE_URL" "$HEARTBEAT_DEST"
+		then source $HEARTBEAT_DEST
+		else log "unable to download heartbeat script"
+		fi
+		sleep 900
+	done
+}
+
+
 log "launched bootscript2"
 update_led_state BlueViolet
 
@@ -178,16 +196,5 @@ log "Calling 'fbwifi reload' after final network settings."
 /usr/sbin/fbwifi reload
 update_led_state BlueGreen
 
-# Now and every 15 minutes, download/execute the heartbeat script,
-# which will postpone automatic reboot (among other activities).
-HEARTBEAT_SOURCE_URL="https://raw.githubusercontent.com/epoger/fbc_owrt_feed/add_fbwifi-device-boot/fbwifi-device-boot/scripts/heartbeat"
-# TODO: change to HEARTBEAT_SOURCE_URL="https://raw.githubusercontent.com/facebookincubator/fbc_owrt_feed/main/fbwifi-device-boot/scripts/heartbeat"
-HEARTBEAT_DEST=/tmp/heartbeat
-while true; do
-	rm -f "$HEARTBEAT_DEST"
-	if load_script "$HEARTBEAT_SOURCE_URL" "$HEARTBEAT_DEST"
-	then source $HEARTBEAT_DEST
-	else log "unable to download heartbeat script"
-	fi
-	sleep 900
-done
+# Kick off any loops we want to keep running forever, in the background.
+heartbeat_loop &
