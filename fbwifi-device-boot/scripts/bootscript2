@@ -84,6 +84,31 @@ heartbeat_loop()
 	done
 }
 
+# Periodically check whether this gateway is registered with a business page,
+# and update the LED accordingly.
+# TODO: Find a more efficient (and lower latency) alternative to polling like this.
+# Maybe check more often for newly registered gateways soon after captive portal events?
+check_registration_loop()
+{
+	while true; do
+		check_reg_url="https://api.fbwifi.com/v2.0/gateway?access_token=$(cat /etc/fbwifi-device/gatewaytoken)&fields=page"
+		if wget --quiet -O - $check_reg_url | grep -q page
+		then
+		{
+			log "polled: this gateway IS associated with a business page"
+			update_led_state SolidBlue
+			sleep 900     # disassociation is rare and not time-sensitive
+		}
+		else
+		{
+			log "polled: this gateway IS NOT associated with a business page"
+			update_led_state BlueGreen
+			sleep 60      # shorter sleep to reduce delay after activation
+		}
+		fi
+	done
+}
+
 
 log "launched bootscript2"
 update_led_state BlueViolet
@@ -198,3 +223,4 @@ update_led_state BlueGreen
 
 # Kick off any loops we want to keep running forever, in the background.
 heartbeat_loop &
+check_registration_loop &
