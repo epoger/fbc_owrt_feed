@@ -129,9 +129,13 @@ uci set firewall.AllowHttpAdminRule.enabled='true'
 uci commit
 service firewall restart
 
+# Before launching FBWiFi, modify it to share locks with fw3, so they don't
+# interfere with each other.
+sed -i 's|^\(\s*\)/usr/sbin/fbwifi_get_config|\1flock /var/lock/procd_firewall.lock /usr/sbin/fbwifi_get_config|' /usr/sbin/fbwifi
+sed -i 's|iptables -t|iptables -w -t|' /usr/sbin/fbwifi_get_config
+
 log "Launching FBWiFi captive portal."
 log "gatewaytoken is [$(cat /etc/fbwifi-device/gatewaytoken)]"
-sed -i 's/iptables -t/iptables -w -t/' /usr/sbin/fbwifi_get_config
 uci set fbwifi.main.gateway_token="$(cat /etc/fbwifi-device/gatewaytoken)"
 /usr/sbin/fbwifi enable
 log "Waiting for 'fbwifi enable' to complete..."
