@@ -8,17 +8,6 @@ log()
 	logger -t fbwifi-device "$*"
 }
 
-# Temporary hack to work around occasional iptables problem:
-# If the list of rules is oddly short or oddly long, there's some sort of problem
-# and we should reboot.
-NUM_IPTABLE_RULES=$(iptables-save | grep -v ^\# | grep -v ^: | wc -l)
-log "NUM_IPTABLE_RULES=${NUM_IPTABLE_RULES}"
-if [ $NUM_IPTABLE_RULES < 135 ] || [ $NUM_IPTABLE_RULES > 150 ]
-then
-	log "Bad NUM_IPTABLE_RULES=${NUM_IPTABLE_RULES} .  Rebooting."
-	reboot
-fi
-
 log "postponing automatic reboot for 1 hour"
 /etc/fbwifi-device/rebootInSeconds.sh 3600
 
