@@ -4,7 +4,7 @@
 # and syslogd (so it will show up on "logread -e fbwifi")
 log()
 {
-	echo "$*" >/dev/kmsg
+	echo "fbwifi-device: $*" >/dev/kmsg
 	logger -t fbwifi-device "$*"
 }
 
