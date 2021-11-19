@@ -138,7 +138,10 @@ service firewall restart
 
 # Before launching FBWiFi, modify it to share locks with fw3, so they don't
 # interfere with each other.
-sed -i 's|^\(\s*\)/usr/sbin/fbwifi_get_config|\1flock /var/lock/procd_firewall.lock /usr/sbin/fbwifi_get_config|' /usr/sbin/fbwifi
+# Ideally, it would work if we just made the FBWiFi code share the /var/lock/procd_firewall.lock
+# that fw3 already uses.  But it seems like fw3 doesn't even observe that lock sometimes!?!?!
+sed -i 's|^\(\s*\)/usr/sbin/fbwifi_get_config|\1flock /var/lock/fbwifidevice_firewall.lock /usr/sbin/fbwifi_get_config|' /usr/sbin/fbwifi
+sed -i 's|^\(\s*\)fw3|\1flock /var/lock/fbwifidevice_firewall.lock fw3|' /etc/init.d/firewall /etc/hotplug.d/iface/20-firewall
 sed -i 's|iptables -t|iptables -w -t|' /usr/sbin/fbwifi_get_config
 
 log "Launching FBWiFi captive portal."
