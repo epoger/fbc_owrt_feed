@@ -116,16 +116,23 @@ update_led_state BlueViolet
 # Disable SSH access, now that we're running OK.
 uci set firewall.AllowSshAdminRule.enabled='false'
 
-# TODO: in production, remove this block
-# For testing only: Open up SSH and HTTP admin access, on both Ethernet
-# and wireless, with no password, for testing purposes.
-echo "root::0:0:99999:7:::" >/tmp/shadow
-grep -v ^root /etc/shadow >>/tmp/shadow
-cp /tmp/shadow /etc/shadow
-uci set firewall.AllowSshAdminRule.src='*'
-uci set firewall.AllowSshAdminRule.enabled='true'
-uci set firewall.AllowHttpAdminRule.src='*'
-uci set firewall.AllowHttpAdminRule.enabled='true'
+# For developer units only: Open up SSH (on Ethernet port only, with no password).
+if FBDEV=$(fw_printenv -n fbdev) && [[ $FBDEV == "1" ]]
+then {
+	SERIAL=$(fw_printenv -n eqsn)
+	SERIAL_LAST6=${SERIAL:(-6)}
+	WAN_IP=$(ip addr show wan | grep 'inet' | grep -v 'inet6' | sed 's|^.*inet \(.*\)/.*$|\1|')
+	echo "root::0:0:99999:7:::" >/tmp/shadow
+	grep -v ^root /etc/shadow >>/tmp/shadow
+	cp /tmp/shadow /etc/shadow
+	uci set firewall.AllowSshAdminRule.src='wan'
+	uci set firewall.AllowSshAdminRule.enabled='true'
+	SSID="GuestWiFi_${SERIAL_LAST6}_${WAN_IP}"
+} else {
+	SSID="Guest Wi-Fi"
+}
+fi
+
 uci commit
 service firewall restart
 
@@ -194,22 +201,17 @@ uci set firewall.AllowDnsRequestRule.target='ACCEPT'
 uci set firewall.AllowDnsRequestRule.enabled='true'
 
 # Finally, open up WiFi (no encryption) so users can connect.
-# TODO: Set the SSID to "Guest Wi-Fi" as the instructions sheet says.
-SERIAL=$(fw_printenv -n eqsn)
-SERIAL_LAST6=${SERIAL:(-6)}
-FWVERSION=$(cat /etc/fbwifi-device/fwversion)
-COMMITHASH=${FWVERSION/*_/}
 uci set wireless.radio0.channel="auto"
 uci set wireless.radio0.hwmode="11g"
 uci set wireless.radio0.htmode="HT20"
 uci set wireless.radio0.disabled="0"
-uci set wireless.default_radio0.ssid="GuestWiFi_${COMMITHASH}_${SERIAL_LAST6}"
+uci set wireless.default_radio0.ssid="$SSID"
 uci set wireless.default_radio0.encryption="none"
 uci set wireless.radio1.channel="auto"
 uci set wireless.radio1.hwmode="11a"
 uci set wireless.radio1.htmode="VHT40"
 uci set wireless.radio1.disabled="0"
-uci set wireless.default_radio1.ssid="GuestWiFi_${COMMITHASH}_${SERIAL_LAST6}"
+uci set wireless.default_radio1.ssid="$SSID"
 uci set wireless.default_radio1.encryption="none"
 
 # Make the above network changes take effect.
