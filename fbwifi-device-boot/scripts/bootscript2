@@ -113,6 +113,10 @@ check_registration_loop()
 log "launched bootscript2"
 update_led_state BlueViolet
 
+# To aid in debugging, set names for some firewall rules we didn't have names for.
+uci set firewall.AllowHttpAdminRule.name='AllowHttpAdminRule'
+uci set firewall.AllowSshAdminRule.name='AllowSshAdminRule'
+
 # Disable SSH access, now that we're running OK.
 uci set firewall.AllowSshAdminRule.enabled='false'
 
@@ -197,6 +201,7 @@ uci set firewall.@forwarding[-1].dest='wan'
 
 # Allow DNS requests through the firewall.
 uci set firewall.AllowDnsRequestRule=rule
+uci set firewall.AllowDnsRequestRule.name='AllowDnsRequestRule'
 uci set firewall.AllowDnsRequestRule.proto='*'
 uci set firewall.AllowDnsRequestRule.src='lan'
 uci set firewall.AllowDnsRequestRule.dest_port='53'
