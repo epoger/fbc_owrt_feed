@@ -137,9 +137,6 @@ then {
 }
 fi
 
-uci commit
-service firewall restart
-
 # Before launching FBWiFi, modify it to share locks with fw3, so they don't
 # interfere with each other.
 # Ideally, it would work if we just made the FBWiFi code share the /var/lock/procd_firewall.lock
@@ -152,12 +149,6 @@ log "Launching FBWiFi captive portal."
 log "gatewaytoken is [$(cat /etc/fbwifi-device/gatewaytoken)]"
 uci set fbwifi.main.gateway_token="$(cat /etc/fbwifi-device/gatewaytoken)"
 /usr/sbin/fbwifi enable
-log "Waiting for 'fbwifi enable' to complete..."
-while ! uci -c /var/state get fbwifi.main.captive_portal_url 2>/dev/null
-do sleep 1
-done
-log "'fbwifi enable' is complete."
-sleep 10  # hack to really wait for it to complete
 
 # Set LAN (wireless) IP subnet to something that does not conflict with WAN IP subnet
 ROUTER_IP=$(ip route | grep default | awk '{print $3}')
@@ -229,12 +220,23 @@ uci set wireless.radio1.disabled="0"
 uci set wireless.default_radio1.ssid="$SSID"
 uci set wireless.default_radio1.encryption="none"
 
+log "Waiting for 'fbwifi enable' to complete..."
+while ! uci -c /var/state get fbwifi.main.captive_portal_url 2>/dev/null
+do sleep 1
+done
+log "'fbwifi enable' is complete."
+
 # Make the above network changes take effect.
-log "Committing final network settings."
+log "Committing final network settings..."
 uci commit
 reload_config
-/etc/init.d/network restart
-sleep 10  # hack to really wait for network changes to complete
+while ! ifconfig br-lan 2>/dev/null
+do sleep 1
+done
+while ! ip route | grep -q default 
+do sleep 1
+done
+log "Final network settings have taken effect."
 
 # We have to reload, to successfully complete some setup steps that require firewall changes
 # that we made the first time through.
