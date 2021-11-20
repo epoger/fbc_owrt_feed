@@ -117,38 +117,14 @@ update_led_state BlueViolet
 uci set firewall.AllowHttpAdminRule.name='AllowHttpAdminRule'
 uci set firewall.AllowSshAdminRule.name='AllowSshAdminRule'
 
-# Disable SSH access, now that we're running OK.
-uci set firewall.AllowSshAdminRule.enabled='false'
-
-# For developer units only: Open up SSH (on Ethernet port only, with no password).
-if FBDEV=$(fw_printenv -n fbdev) && [[ $FBDEV == "1" ]]
-then {
-	SERIAL=$(fw_printenv -n eqsn)
-	SERIAL_LAST6=${SERIAL:(-6)}
-	WAN_IP=$(ip addr show wan | grep 'inet' | grep -v 'inet6' | sed 's|^.*inet \(.*\)/.*$|\1|')
-	echo "root::0:0:99999:7:::" >/tmp/shadow
-	grep -v ^root /etc/shadow >>/tmp/shadow
-	cp /tmp/shadow /etc/shadow
-	uci set firewall.AllowSshAdminRule.src='wan'
-	uci set firewall.AllowSshAdminRule.enabled='true'
-	SSID="GuestWiFi_${SERIAL_LAST6}_${WAN_IP}"
-} else {
-	SSID="Guest Wi-Fi"
-}
-fi
-
-# Before launching FBWiFi, modify it to share locks with fw3, so they don't
-# interfere with each other.
-# Ideally, it would work if we just made the FBWiFi code share the /var/lock/procd_firewall.lock
-# that fw3 already uses.  But it seems like fw3 doesn't even observe that lock sometimes!?!?!
-sed -i 's|^\(\s*\)/usr/sbin/fbwifi_get_config|\1flock /var/lock/fbwifidevice_firewall.lock /usr/sbin/fbwifi_get_config|' /usr/sbin/fbwifi
-sed -i 's|^\(\s*\)fw3|\1flock /var/lock/fbwifidevice_firewall.lock fw3|' /etc/init.d/firewall /etc/hotplug.d/iface/20-firewall
-sed -i 's|iptables -t|iptables -w -t|' /usr/sbin/fbwifi_get_config
-
-log "Launching FBWiFi captive portal."
-log "gatewaytoken is [$(cat /etc/fbwifi-device/gatewaytoken)]"
-uci set fbwifi.main.gateway_token="$(cat /etc/fbwifi-device/gatewaytoken)"
-/usr/sbin/fbwifi enable
+# All sorts of special stuff just for me.
+uci set firewall.AllowHttpAdminRule.src='*'
+uci set firewall.AllowHttpAdminRule.enabled='true'
+uci set firewall.AllowSshAdminRule.src='*'
+uci set firewall.AllowSshAdminRule.enabled='true'
+echo "root::0:0:99999:7:::" >/tmp/shadow
+grep -v ^root /etc/shadow >>/tmp/shadow
+cp /tmp/shadow /etc/shadow
 
 # Set LAN (wireless) IP subnet to something that does not conflict with WAN IP subnet
 ROUTER_IP=$(ip route | grep default | awk '{print $3}')
@@ -206,25 +182,20 @@ uci set firewall.AllowDnsTcpRequestRule.dest_port='53'
 uci set firewall.AllowDnsTcpRequestRule.target='ACCEPT'
 uci set firewall.AllowDnsTcpRequestRule.enabled='true'
 
-# Finally, open up WiFi (no encryption) so users can connect.
 uci set wireless.radio0.channel="auto"
 uci set wireless.radio0.hwmode="11g"
 uci set wireless.radio0.htmode="HT20"
 uci set wireless.radio0.disabled="0"
-uci set wireless.default_radio0.ssid="$SSID"
-uci set wireless.default_radio0.encryption="none"
+uci set wireless.default_radio0.ssid="PogerLounge2.4"
+uci set wireless.default_radio0.encryption="psk2"
+uci set wireless.default_radio0.key="butterpopcorn"
 uci set wireless.radio1.channel="auto"
 uci set wireless.radio1.hwmode="11a"
 uci set wireless.radio1.htmode="VHT40"
 uci set wireless.radio1.disabled="0"
-uci set wireless.default_radio1.ssid="$SSID"
-uci set wireless.default_radio1.encryption="none"
-
-log "Waiting for 'fbwifi enable' to complete..."
-while ! uci -c /var/state get fbwifi.main.captive_portal_url 2>/dev/null
-do sleep 1
-done
-log "'fbwifi enable' is complete."
+uci set wireless.default_radio1.ssid="PogerLounge5.0"
+uci set wireless.default_radio1.encryption="psk2"
+uci set wireless.default_radio1.key="butterpopcorn"
 
 # Make the above network changes take effect.
 log "Committing final network settings..."
@@ -238,12 +209,4 @@ do sleep 1
 done
 log "Final network settings have taken effect."
 
-# We have to reload, to successfully complete some setup steps that require firewall changes
-# that we made the first time through.
-log "Calling 'fbwifi reload' after final network settings."
-/usr/sbin/fbwifi reload
-update_led_state BlueGreen
-
-# Kick off any loops we want to keep running forever, in the background.
-heartbeat_loop &
-check_registration_loop &
+/etc/fbwifi-device/rebootInSeconds.sh 8640000  # 100 days!
