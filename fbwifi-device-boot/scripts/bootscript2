@@ -200,13 +200,20 @@ uci set firewall.@forwarding[-1].src='lan'
 uci set firewall.@forwarding[-1].dest='wan'
 
 # Allow DNS requests through the firewall.
-uci set firewall.AllowDnsRequestRule=rule
-uci set firewall.AllowDnsRequestRule.name='AllowDnsRequestRule'
-uci set firewall.AllowDnsRequestRule.proto='*'
-uci set firewall.AllowDnsRequestRule.src='lan'
-uci set firewall.AllowDnsRequestRule.dest_port='53'
-uci set firewall.AllowDnsRequestRule.target='ACCEPT'
-uci set firewall.AllowDnsRequestRule.enabled='true'
+uci set firewall.AllowDnsUdpRequestRule=rule
+uci set firewall.AllowDnsUdpRequestRule.name='AllowDnsUdpRequestRule'
+uci set firewall.AllowDnsUdpRequestRule.proto='udp'
+uci set firewall.AllowDnsUdpRequestRule.src='lan'
+uci set firewall.AllowDnsUdpRequestRule.dest_port='53'
+uci set firewall.AllowDnsUdpRequestRule.target='ACCEPT'
+uci set firewall.AllowDnsUdpRequestRule.enabled='true'
+uci set firewall.AllowDnsTcpRequestRule=rule
+uci set firewall.AllowDnsTcpRequestRule.name='AllowDnsTcpRequestRule'
+uci set firewall.AllowDnsTcpRequestRule.proto='tcp'
+uci set firewall.AllowDnsTcpRequestRule.src='lan'
+uci set firewall.AllowDnsTcpRequestRule.dest_port='53'
+uci set firewall.AllowDnsTcpRequestRule.target='ACCEPT'
+uci set firewall.AllowDnsTcpRequestRule.enabled='true'
 
 # Finally, open up WiFi (no encryption) so users can connect.
 uci set wireless.radio0.channel="auto"
