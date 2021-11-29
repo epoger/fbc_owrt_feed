@@ -14,8 +14,9 @@ log "postponing automatic reboot for 1 hour"
 # Temporary hack to work around occasional iptables problem:
 # If the list of rules is oddly short or oddly long, there's some sort of problem
 # and we should reboot.
+# Don't count per-client rules, which match 'FBWIFI_CLIENT_TO_INTERNET.*mac-source'.
 sleep 20  # a little delay for network configs to settle down
-NUM_IPTABLE_RULES=$(iptables-save | grep -v ^\# | grep -v ^: | wc -l)
+NUM_IPTABLE_RULES=$(iptables-save | grep -v ^\# | grep -v ^: | grep -v 'FBWIFI_CLIENT_TO_INTERNET.*mac-source' | wc -l)
 log "NUM_IPTABLE_RULES=${NUM_IPTABLE_RULES}"
 if [ $NUM_IPTABLE_RULES -lt 135 ] || [ $NUM_IPTABLE_RULES -gt 150 ]
 then
