@@ -1,0 +1,249 @@
+# FBWIFI
+
+# Log to both klogd (so it will show up on serial port and "dmesg")
+# and syslogd (so it will show up on "logread -e fbwifi")
+log()
+{
+	echo "fbwifi-device: $*" >/dev/kmsg
+	logger -t fbwifi-device "$*"
+}
+
+# Update color(s) displayed by the LED, if those have changed since the last call.
+update_led_state()
+{
+	if [ "$PREV_LED_STATE" == $1 ]
+	then
+		return
+	fi
+	PREV_LED_STATE=$1
+
+	case $1 in
+	BlueGreen)
+		# indicates: FBWiFi is running, but not yet registered with a business
+		led_off red
+		led_on green
+		led_timer blue 500 500
+		;;
+	BlueViolet)
+		# indicates: this script has launched
+		led_timer red 500 500
+		led_off green
+		led_on blue
+		;;
+	SolidBlue)
+		# indicates: FBWiFi is running and registered with a business (ready for customers!)
+		led_off red
+		led_off green
+		led_on blue
+		;;
+	esac
+}
+
+# Attempts to download a script from URL $1 into destfile $2.
+# Returns 0 if the script download seems to have worked, 1 otherwise.
+# We check not only that wget succeeded, but also that the downloaded file
+# contains "FBWIFI" (indicating that it is not a boilerplate server response).
+load_script()
+{
+	log "load_script $1"
+
+	if [ "$1" == "" ]
+	then
+		return 1
+	fi
+
+	if ! wget -O $2 $1
+	then
+		return 1
+	fi
+
+	if grep -q FBWIFI $2
+	then
+		return 0
+	else {
+		log "Script is missing FBWIFI" ;
+		return 1 ;
+	}
+	fi
+}
+
+# Now and every 15 minutes, download/execute the heartbeat script,
+# which will postpone automatic reboot (among other activities).
+heartbeat_loop()
+{
+	HEARTBEAT_SOURCE_URL="https://raw.githubusercontent.com/epoger/fbc_owrt_feed/add_fbwifi-device-boot/fbwifi-device-boot/scripts/heartbeat"
+	# TODO: change to HEARTBEAT_SOURCE_URL="https://raw.githubusercontent.com/facebookincubator/fbc_owrt_feed/main/fbwifi-device-boot/scripts/heartbeat"
+	HEARTBEAT_DEST=/tmp/heartbeat
+	while true; do
+		rm -f "$HEARTBEAT_DEST"
+		if load_script "$HEARTBEAT_SOURCE_URL" "$HEARTBEAT_DEST"
+		then source $HEARTBEAT_DEST
+		else log "unable to download heartbeat script"
+		fi
+		sleep 900
+	done
+}
+
+# Periodically check whether this gateway is registered with a business page,
+# and update the LED accordingly.
+# TODO: Find a more efficient (and lower latency) alternative to polling like this.
+# Maybe check more often for newly registered gateways soon after captive portal events?
+check_registration_loop()
+{
+	while true; do
+		check_reg_url="https://api.fbwifi.com/v2.0/gateway?access_token=$(cat /etc/fbwifi-device/gatewaytoken)&fields=page"
+		if wget --quiet -O - $check_reg_url | grep -q page
+		then
+		{
+			log "polled: this gateway IS associated with a business page"
+			update_led_state SolidBlue
+			sleep 900     # disassociation is rare and not time-sensitive
+		}
+		else
+		{
+			log "polled: this gateway IS NOT associated with a business page"
+			update_led_state BlueGreen
+			sleep 60      # shorter sleep to reduce delay after activation
+		}
+		fi
+	done
+}
+
+
+log "launched bootscript2"
+update_led_state BlueViolet
+
+# To aid in debugging, set names for some firewall rules we didn't have names for.
+uci set firewall.AllowHttpAdminRule.name='AllowHttpAdminRule'
+uci set firewall.AllowSshAdminRule.name='AllowSshAdminRule'
+
+# Disable SSH access, now that we're running OK.
+uci set firewall.AllowSshAdminRule.enabled='false'
+
+# For developer units only: Open up SSH (on Ethernet port only, with no password).
+if FBDEV=$(fw_printenv -n fbdev) && [[ $FBDEV == "1" ]]
+then {
+	SERIAL=$(fw_printenv -n eqsn)
+	SERIAL_LAST6=${SERIAL:(-6)}
+	WAN_IP=$(ip addr show wan | grep 'inet' | grep -v 'inet6' | sed 's|^.*inet \(.*\)/.*$|\1|')
+	echo "root::0:0:99999:7:::" >/tmp/shadow
+	grep -v ^root /etc/shadow >>/tmp/shadow
+	cp /tmp/shadow /etc/shadow
+	uci set firewall.AllowSshAdminRule.src='wan'
+	uci set firewall.AllowSshAdminRule.enabled='true'
+	SSID="GuestWiFi_${SERIAL_LAST6}_${WAN_IP}"
+} else {
+	SSID="Guest Wi-Fi"
+}
+fi
+
+# Before launching FBWiFi, modify it to share locks with fw3, so they don't
+# interfere with each other.
+# Ideally, it would work if we just made the FBWiFi code share the /var/lock/procd_firewall.lock
+# that fw3 already uses.  But it seems like fw3 doesn't even observe that lock sometimes!?!?!
+sed -i 's|^\(\s*\)/usr/sbin/fbwifi_get_config|\1flock /var/lock/fbwifidevice_firewall.lock /usr/sbin/fbwifi_get_config|' /usr/sbin/fbwifi
+sed -i 's|^\(\s*\)fw3|\1flock /var/lock/fbwifidevice_firewall.lock fw3|' /etc/init.d/firewall /etc/hotplug.d/iface/20-firewall
+sed -i 's|iptables -t|iptables -w -t|' /usr/sbin/fbwifi_get_config
+
+log "Launching FBWiFi captive portal."
+log "gatewaytoken is [$(cat /etc/fbwifi-device/gatewaytoken)]"
+uci set fbwifi.main.gateway_token="$(cat /etc/fbwifi-device/gatewaytoken)"
+/usr/sbin/fbwifi enable
+
+# Set LAN (wireless) IP subnet to something that does not conflict with WAN IP subnet
+ROUTER_IP=$(ip route | grep default | awk '{print $3}')
+if [[ $ROUTER_IP == "192*" ]]; then
+	MY_LAN_IP="172.16.0.1"
+else
+	MY_LAN_IP="192.168.0.1"
+fi
+log "ROUTER_IP is $ROUTER_IP, so MY_LAN_IP will be $MY_LAN_IP"
+uci set network.lan.ipaddr="$MY_LAN_IP"
+uci set network.lan.netmask='255.255.0.0'
+uci set network.lan.disabled=0
+
+# Set up DHCP server.
+uci set dhcp.lan.start='10'
+uci set dhcp.lan.limit='9000'
+uci set dhcp.lan.leasetime='1h'
+
+# Disable everything IPv6.
+uci set dhcp.lan.dhcpv6='disabled'
+uci set dhcp.lan.ra='disabled'
+uci delete network.wan6
+uci set network.@device[0].ipv6='0'  # br-lan device
+uci set network.device_eth0='device'
+uci set network.device_eth0.name='eth0'
+uci set network.device_eth0.ipv6='0'
+uci set network.device_wan='device'
+uci set network.device_wan.name='wan'
+uci set network.device_wan.ipv6='0'
+uci set network.device_wlan0='device'
+uci set network.device_wlan0.name='wlan0'
+uci set network.device_wlan0.ipv6='0'
+uci set network.device_wlan1='device'
+uci set network.device_wlan1.name='wlan1'
+uci set network.device_wlan1.ipv6='0'
+
+# Enable NAT forwarding from lan to wan
+uci add firewall forwarding 
+uci set firewall.@forwarding[-1].src='lan'
+uci set firewall.@forwarding[-1].dest='wan'
+
+# Allow DNS requests through the firewall.
+uci set firewall.AllowDnsUdpRequestRule=rule
+uci set firewall.AllowDnsUdpRequestRule.name='AllowDnsUdpRequestRule'
+uci set firewall.AllowDnsUdpRequestRule.proto='udp'
+uci set firewall.AllowDnsUdpRequestRule.src='lan'
+uci set firewall.AllowDnsUdpRequestRule.dest_port='53'
+uci set firewall.AllowDnsUdpRequestRule.target='ACCEPT'
+uci set firewall.AllowDnsUdpRequestRule.enabled='true'
+uci set firewall.AllowDnsTcpRequestRule=rule
+uci set firewall.AllowDnsTcpRequestRule.name='AllowDnsTcpRequestRule'
+uci set firewall.AllowDnsTcpRequestRule.proto='tcp'
+uci set firewall.AllowDnsTcpRequestRule.src='lan'
+uci set firewall.AllowDnsTcpRequestRule.dest_port='53'
+uci set firewall.AllowDnsTcpRequestRule.target='ACCEPT'
+uci set firewall.AllowDnsTcpRequestRule.enabled='true'
+
+# Finally, open up WiFi (no encryption) so users can connect.
+uci set wireless.radio0.channel="auto"
+uci set wireless.radio0.hwmode="11g"
+uci set wireless.radio0.htmode="HT20"
+uci set wireless.radio0.disabled="0"
+uci set wireless.default_radio0.ssid="$SSID"
+uci set wireless.default_radio0.encryption="none"
+uci set wireless.radio1.channel="auto"
+uci set wireless.radio1.hwmode="11a"
+uci set wireless.radio1.htmode="VHT40"
+uci set wireless.radio1.disabled="0"
+uci set wireless.default_radio1.ssid="$SSID"
+uci set wireless.default_radio1.encryption="none"
+
+log "Waiting for 'fbwifi enable' to complete..."
+while ! uci -c /var/state get fbwifi.main.captive_portal_url 2>/dev/null
+do sleep 1
+done
+log "'fbwifi enable' is complete."
+
+# Make the above network changes take effect.
+log "Committing final network settings..."
+uci commit
+reload_config
+while ! ifconfig br-lan 2>/dev/null
+do sleep 1
+done
+while ! ip route | grep -q default 
+do sleep 1
+done
+log "Final network settings have taken effect."
+
+# We have to reload, to successfully complete some setup steps that require firewall changes
+# that we made the first time through.
+log "Calling 'fbwifi reload' after final network settings."
+/usr/sbin/fbwifi reload
+update_led_state BlueGreen
+
+# Kick off any loops we want to keep running forever, in the background.
+heartbeat_loop &
+check_registration_loop &
