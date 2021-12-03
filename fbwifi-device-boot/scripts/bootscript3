@@ -71,8 +71,7 @@ load_script()
 # which will postpone automatic reboot (among other activities).
 heartbeat_loop()
 {
-	HEARTBEAT_SOURCE_URL="https://raw.githubusercontent.com/epoger/fbc_owrt_feed/add_fbwifi-device-boot/fbwifi-device-boot/scripts/heartbeat"
-	# TODO: change to HEARTBEAT_SOURCE_URL="https://raw.githubusercontent.com/facebookincubator/fbc_owrt_feed/main/fbwifi-device-boot/scripts/heartbeat"
+	HEARTBEAT_SOURCE_URL="$(cat /etc/fbwifi-device/releasetagbaseurl)/scripts/heartbeat"
 	HEARTBEAT_DEST=/tmp/heartbeat
 	while true; do
 		rm -f "$HEARTBEAT_DEST"
