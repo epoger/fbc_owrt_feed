@@ -8,32 +8,28 @@ log()
 	logger -t fbwifi-device "$*"
 }
 
-# Attempts to download a script from URL $1 into destfile $2.
-# Returns 0 if the script download seems to have worked, 1 otherwise.
+# Downloads a file from URL $1 into destfile $2, replacing the file at that path
+# (if any) atomically.
 # We check not only that wget succeeded, but also that the downloaded file
 # contains "FBWIFI" (indicating that it is not a boilerplate server response).
-load_script()
+# Retries until success... if never successful, we count on the reboot timer
+# to finally exit the loop (by rebooting the device).
+load_file_blocking()
 {
-	log "load_script $1"
+	dest_path=$2
+	temp_path=$(mktemp)
+	log "load_file_blocking $1"
 
-	if [ "$1" == "" ]
-	then
-		return 1
-	fi
-
-	if ! wget -O $2 $1
-	then
-		return 1
-	fi
-
-	if grep -q FBWIFI $2
-	then
-		return 0
-	else {
-		log "Script is missing FBWIFI" ;
-		return 1 ;
-	}
-	fi
+	while true; do
+		if wget -O $temp_path $1 && grep -q FBWIFI $temp_path
+		then {
+			mv $temp_path $dest_path
+			return 0
+		}
+		fi
+		log "unable to download $1 , will retry"
+		sleep 30
+	done
 }
 
 
@@ -63,17 +59,5 @@ echo ${RELEASE_TAG_BASE_URL} >/etc/fbwifi-device/releasetagbaseurl
 BOOTSCRIPT3_URL="${RELEASE_TAG_BASE_URL}/scripts/bootscript3"
 BOOTSCRIPT3_PATH=/tmp/bootscript3
 log "BOOTSCRIPT3_URL=${BOOTSCRIPT3_URL}"
-
-while true; do
-	rm -f "$BOOTSCRIPT3_PATH"
-	if load_script "$BOOTSCRIPT3_URL" "$BOOTSCRIPT3_PATH"
-	then {
-		source $BOOTSCRIPT3_PATH
-		exit
-	}
-	else {
-		log "unable to download ${BOOTSCRIPT3_URL}"
-	}
-	fi
-	sleep 30   # keep retrying until the reboot gets us
-done
+load_file_blocking "$BOOTSCRIPT3_URL" "$BOOTSCRIPT3_PATH"
+source $BOOTSCRIPT3_PATH
