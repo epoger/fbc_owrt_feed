@@ -2,7 +2,7 @@
 # Update squashfs to fbwifi_initramfs_2021-11-16_ec43517
 # Created specifically for updating fbwifi_2021-11-11_e5b0433 , but should work more generally as well.
 
-set -e  # bail at first failure
+echo "Launched update_to_ec43517"
 
 opkg update || echo "failure of this line is OK"
 opkg install ccrypt
