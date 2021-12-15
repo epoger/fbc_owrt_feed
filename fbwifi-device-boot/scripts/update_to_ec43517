@@ -2,15 +2,33 @@
 # Update squashfs to fbwifi_initramfs_2021-11-16_ec43517
 # Created specifically for updating fbwifi_2021-11-11_e5b0433 , but should work more generally as well.
 
-echo "Launched update_to_ec43517"
+# Log to both klogd (so it will show up on serial port and "dmesg")
+# and syslogd (so it will show up on "logread -e fbwifi")
+log()
+{
+	echo "fbwifi-device: $*" >/dev/kmsg
+	logger -t fbwifi-device "$*"
+}
 
-opkg update || echo "failure of this line is OK"
+log "Launched update_to_ec43517"
+
+# If we encounter any problems, exit immediately.
+set -e
+
+# I'm not sure why there is an openwrt_fbc distfeed in here, but it causes "opkg update" to fail.  Remove it.
+grep -v openwrt_fbc /etc/opkg/distfeeds.conf >/tmp/distfeeds.conf
+mv /tmp/distfeeds.conf /etc/opkg/distfeeds.conf
+
+opkg update
 opkg install ccrypt
+log "Downloading replacement firmware..."
 wget https://fbbos-public.s3.us-east-2.amazonaws.com/fbwifi_initramfs_2021-11-16_ec43517.bin.cpt -O /tmp/fbwifi_initramfs_2021-11-16_ec43517.bin.cpt
 echo "f8c68b0dac291c2f7fe85e755deb8945830907e9b9a271fd9433a82c033bb5a7  /tmp/fbwifi_initramfs_2021-11-16_ec43517.bin.cpt" | sha256sum -c
 ccdecrypt --key j38ghnum29cgf /tmp/fbwifi_initramfs_2021-11-16_ec43517.bin.cpt
 echo "1f21fe5d4279a4f77f11a1dd4b79030e3e4bfbf12bd82d06618b1ac7b872df02  /tmp/fbwifi_initramfs_2021-11-16_ec43517.bin" | sha256sum -c
+log "Downloaded firmware checks out.  Writing it to flash..."
 mtd erase firmware_1
 mtd write /tmp/fbwifi_initramfs_2021-11-16_ec43517.bin firmware_1
 echo "bogus_data_to_trigger_overwrite" | mtd write - firmware
+log "Flash write completed... time to reboot!"
 reboot
