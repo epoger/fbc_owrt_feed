@@ -53,6 +53,15 @@ esac
 RELEASE_TAG=$(grep "^${RELEASE_BRANCH}" $CURRENT_TAGS_PATH | awk '{print $2}')
 RELEASE_TAG_BASE_URL="https://raw.githubusercontent.com/epoger/fbc_owrt_feed/${RELEASE_TAG}/fbwifi-device-boot"
 
+# Allow for local override of RELEASE_TAG_BASE_URL, for development purposes.
+if OVERRIDE_BASE_URL=$(fw_printenv -n fbbaseurl)
+then {
+	RELEASE_BRANCH=fbbaseurl
+	RELEASE_TAG=fbbaseurl
+	RELEASE_TAG_BASE_URL="$OVERRIDE_BASE_URL"
+}
+fi
+
 log "RELEASE_BRANCH=${RELEASE_BRANCH}"
 log "RELEASE_TAG=${RELEASE_TAG}"
 log "RELEASE_TAG_BASE_URL=${RELEASE_TAG_BASE_URL}"
