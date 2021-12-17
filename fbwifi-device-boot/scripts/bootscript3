@@ -112,18 +112,6 @@ check_registration_loop()
 log "launched bootscript3"
 update_led_state BlueViolet
 
-if [[ $(cat /etc/fbwifi-device/fwversion) == "2021-11-11_e5b0433" ]]
-then {
-	load_script "$(cat /etc/fbwifi-device/releasetagbaseurl)/scripts/update_to_ec43517" /tmp/update
-	chmod +x /tmp/update
-	/tmp/update >>/tmp/update.log 2>&1
-	retval=$?
-	log "update_to_ec43517 exited with code $retval.  Will reboot in 30 seconds."
-	sleep 30
-	reboot
-}
-fi
-
 # To aid in debugging, set names for some firewall rules we didn't have names for.
 uci set firewall.AllowHttpAdminRule.name='AllowHttpAdminRule'
 uci set firewall.AllowSshAdminRule.name='AllowSshAdminRule'
