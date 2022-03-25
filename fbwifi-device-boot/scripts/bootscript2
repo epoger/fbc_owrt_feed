@@ -33,12 +33,14 @@ load_file_blocking()
 }
 
 
-# Get the currently active tag for each Release Branch.
+# Get the currently active tag, based on a combination of hwversion, fwversion, and Release Branch.
 # That will determine which version of the code we download and run.
-CURRENT_TAGS_URL="https://raw.githubusercontent.com/epoger/fbc_owrt_feed/main/fbwifi-device-boot/currenttags"
-CURRENT_TAGS_PATH=/tmp/currenttags
+CURRENT_TAGS_URL="https://raw.githubusercontent.com/epoger/fbc_owrt_feed/main/fbwifi-device-boot/currenttags2"
+CURRENT_TAGS_PATH=/tmp/currenttags2
 load_file_blocking "$CURRENT_TAGS_URL" "$CURRENT_TAGS_PATH"
 
+HW_VERSION=$(cat /etc/fbwifi-device/hwversion)
+FW_VERSION=$(cat /etc/fbwifi-device/fwversion)
 case $(fw_printenv -n fbbranch) in
 canary)
 	RELEASE_BRANCH=canary
@@ -50,7 +52,7 @@ beta)
 	RELEASE_BRANCH=stable
 	;;
 esac
-RELEASE_TAG=$(grep "^${RELEASE_BRANCH}" $CURRENT_TAGS_PATH | awk '{print $2}')
+RELEASE_TAG=$(grep -v "^#" $CURRENT_TAGS_PATH | grep $HW_VERSION | grep $FW_VERSION | grep $RELEASE_BRANCH | awk '{print $1}')
 RELEASE_TAG_BASE_URL="https://raw.githubusercontent.com/epoger/fbc_owrt_feed/${RELEASE_TAG}/fbwifi-device-boot"
 
 # Allow for local override of RELEASE_TAG_BASE_URL, for development purposes.
