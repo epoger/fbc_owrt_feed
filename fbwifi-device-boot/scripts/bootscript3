@@ -116,10 +116,9 @@ update_led_state BlueViolet
 uci set firewall.AllowHttpAdminRule.name='AllowHttpAdminRule'
 uci set firewall.AllowSshAdminRule.name='AllowSshAdminRule'
 
-# Disable SSH access, now that we're running OK.
-uci set firewall.AllowSshAdminRule.enabled='false'
-
-# For developer units only: Open up SSH (on Ethernet port only, with no password).
+# For developer units only: Permanently open up SSH (on Ethernet port only, with no password).
+# Otherwise, the "emergency access" SSH that is available at boot time will be shut down 
+# after a few minutes.
 if FBDEV=$(fw_printenv -n fbdev) && [[ "$FBDEV" == "1" ]]
 then {
 	# Allow SSH traffic on Ethernet port specifically.
