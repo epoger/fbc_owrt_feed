@@ -120,16 +120,31 @@ uci set firewall.AllowSshAdminRule.name='AllowSshAdminRule'
 uci set firewall.AllowSshAdminRule.enabled='false'
 
 # For developer units only: Open up SSH (on Ethernet port only, with no password).
-if FBDEV=$(fw_printenv -n fbdev) && [[ $FBDEV == "1" ]]
+if FBDEV=$(fw_printenv -n fbdev) && [[ "$FBDEV" == "1" ]]
 then {
+	# Allow SSH traffic on Ethernet port specifically.
+	uci set firewall.AllowSshAdminRule.src='wan'
+	uci set firewall.AllowSshAdminRule.enabled='true'
+
+	# If we have a pending process that will kill the SSH service, kill that process;
+	# then start the SSH service (it may already be running, which is fine).
+	PID=$(ps | grep killSSHInSeconds | grep -v grep | head -n 1 | awk '{print $1}')
+	if [[ "$PID" != "" ]]
+	then {
+		kill $PID
+	} 
+	fi
+	uci set dropbear.@dropbear[0].enable='1'
+	uci commit dropbear
+	/etc/init.d/dropbear restart
+
+	# No password needed for root login.
+	passwd -d root
+
+	# Set an SSID that displays the Ethernet interface's IP address.
 	SERIAL=$(fw_printenv -n eqsn)
 	SERIAL_LAST6=${SERIAL:(-6)}
 	WAN_IP=$(ip addr show wan | grep 'inet' | grep -v 'inet6' | sed 's|^.*inet \(.*\)/.*$|\1|')
-	echo "root::0:0:99999:7:::" >/tmp/shadow
-	grep -v ^root /etc/shadow >>/tmp/shadow
-	cp /tmp/shadow /etc/shadow
-	uci set firewall.AllowSshAdminRule.src='wan'
-	uci set firewall.AllowSshAdminRule.enabled='true'
 	SSID="GuestWiFi_${SERIAL_LAST6}_${WAN_IP}"
 } else {
 	SSID="Guest Wi-Fi"
