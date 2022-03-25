@@ -1,0 +1,18 @@
+# FBWIFI
+#
+# Updated version of the old "currenttags" file.
+# See https://www.internalfb.com/intern/wiki/Consumer_Wi-Fi/SocialWifi/PnP/ReleaseFramework/
+# for more info.
+#
+# The version of this file stored at the following URL will be used by all devices:
+# https://raw.githubusercontent.com/epoger/fbc_owrt_feed/main/fbwifi-device-boot/currenttags2
+
+# Phase 1 devices:
+20211217a cig_wf808 2021-11-16_ec43517 stable
+20211217a cig_wf808 2021-11-16_ec43517 beta
+20211217a cig_wf808 2021-11-16_ec43517 canary
+
+# Phase 2 devices:
+20220325a cig_wf808 2022-03-25_8e9a5be stable
+20220325a cig_wf808 2022-03-25_8e9a5be beta
+20220325a cig_wf808 2022-03-25_8e9a5be canary
