@@ -18,7 +18,7 @@ log "postponing automatic reboot for 1 hour"
 sleep 20  # a little delay for network configs to settle down
 NUM_IPTABLE_RULES=$(iptables-save | grep -v ^\# | grep -v ^: | grep -v 'FBWIFI_CLIENT_TO_INTERNET.*mac-source' | wc -l)
 log "NUM_IPTABLE_RULES=${NUM_IPTABLE_RULES}"
-if [ $NUM_IPTABLE_RULES -lt 135 ] || [ $NUM_IPTABLE_RULES -gt 150 ]
+if [ $NUM_IPTABLE_RULES -lt 120 ] || [ $NUM_IPTABLE_RULES -gt 150 ]
 then
 	log "Bad NUM_IPTABLE_RULES=${NUM_IPTABLE_RULES} .  Rebooting."
 	reboot
