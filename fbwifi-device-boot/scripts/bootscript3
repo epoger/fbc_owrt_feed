@@ -8,37 +8,6 @@ log()
 	logger -t fbwifi-device "$*"
 }
 
-# Update color(s) displayed by the LED, if those have changed since the last call.
-update_led_state()
-{
-	if [ "$PREV_LED_STATE" == $1 ]
-	then
-		return
-	fi
-	PREV_LED_STATE=$1
-
-	case $1 in
-	BlueGreen)
-		# indicates: FBWiFi is running, but not yet registered with a business
-		led_off red
-		led_on green
-		led_timer blue 500 500
-		;;
-	BlueViolet)
-		# indicates: this script has launched
-		led_timer red 500 500
-		led_off green
-		led_on blue
-		;;
-	SolidBlue)
-		# indicates: FBWiFi is running and registered with a business (ready for customers!)
-		led_off red
-		led_off green
-		led_on blue
-		;;
-	esac
-}
-
 # Attempts to download a script from URL $1 into destfile $2.
 # Returns 0 if the script download seems to have worked, 1 otherwise.
 # We check not only that wget succeeded, but also that the downloaded file
@@ -83,34 +52,7 @@ heartbeat_loop()
 	done
 }
 
-# Periodically check whether this gateway is registered with a business page,
-# and update the LED accordingly.
-# TODO: Find a more efficient (and lower latency) alternative to polling like this.
-# Maybe check more often for newly registered gateways soon after captive portal events?
-check_registration_loop()
-{
-	while true; do
-		check_reg_url="https://api.fbwifi.com/v2.0/gateway?access_token=$(cat /etc/fbwifi-device/gatewaytoken)&fields=page"
-		if wget --quiet -O - $check_reg_url | grep -q page
-		then
-		{
-			log "polled: this gateway IS associated with a business page"
-			update_led_state SolidBlue
-			sleep 900     # disassociation is rare and not time-sensitive
-		}
-		else
-		{
-			log "polled: this gateway IS NOT associated with a business page"
-			update_led_state BlueGreen
-			sleep 60      # shorter sleep to reduce delay after activation
-		}
-		fi
-	done
-}
-
-
 log "launched bootscript3"
-update_led_state BlueViolet
 
 # To aid in debugging, set names for some firewall rules we didn't have names for.
 uci set firewall.AllowHttpAdminRule.name='AllowHttpAdminRule'
@@ -255,8 +197,6 @@ log "Final network settings have taken effect."
 # that we made the first time through.
 log "Calling 'fbwifi reload' after final network settings."
 /usr/sbin/fbwifi reload
-update_led_state BlueGreen
 
 # Kick off any loops we want to keep running forever, in the background.
 heartbeat_loop &
-check_registration_loop &
