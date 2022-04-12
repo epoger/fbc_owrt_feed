@@ -1,6 +1,9 @@
 # FBWIFI
 #
 # Updated version of the old "currenttags" file.
+# Download the scripts using the tag in the first column, if this device's
+# (hwversion, fwversion, fbbranch) match the other columns.
+#
 # See https://www.internalfb.com/intern/wiki/Consumer_Wi-Fi/SocialWifi/PnP/ReleaseFramework/
 # for more info.
 #
@@ -8,11 +11,11 @@
 # https://raw.githubusercontent.com/epoger/fbc_owrt_feed/main/fbwifi-device-boot/currenttags2
 
 # Phase 1 devices:
-20211217a cig_wf808 2021-11-16_ec43517 stable
-20211217a cig_wf808 2021-11-16_ec43517 beta
-20211217a cig_wf808 2021-11-16_ec43517 canary
+20211217a     cig_wf808 2021-11-16_ec43517 stable
+20211217a     cig_wf808 2021-11-16_ec43517 beta
+20211217a     cig_wf808 2021-11-16_ec43517 canary
 
 # Phase 2 devices:
-20220325b cig_wf808 2022-04-11_5966e1e stable
-20220325b cig_wf808 2022-04-11_5966e1e beta
-20220325b cig_wf808 2022-04-11_5966e1e canary
+20220325b     cig_wf808 2022-04-11_5966e1e stable
+20220325b     cig_wf808 2022-04-11_5966e1e beta
+20220325b     cig_wf808 2022-04-11_5966e1e canary
