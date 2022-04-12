@@ -54,6 +54,17 @@ heartbeat_loop()
 
 log "launched bootscript3"
 
+# Add "connected" state (solid blue) for status LED, and update status LED.
+DESTFILE=/etc/fbwifi-device/updateStatusLedConnected
+cat >/etc/fbwifi-device/updateStatusLedConnected <<EOF
+. /lib/functions/leds.sh
+led_off red
+led_off green
+led_on blue
+EOF
+chmod +x /etc/fbwifi-device/updateStatusLedConnected
+/etc/fbwifi-device/updateStatusLed   # will chain to updateStatusLedConnected
+
 # To aid in debugging, set names for some firewall rules we didn't have names for.
 uci set firewall.AllowHttpAdminRule.name='AllowHttpAdminRule'
 uci set firewall.AllowSshAdminRule.name='AllowSshAdminRule'
